@@ -1,0 +1,127 @@
+// Signed Distance Functions for Material3-like Shapes
+// Color used inside shapes
+const vec4 SHAPE_COLOR = vec4(.412, .329, .592, 1.0);
+
+// --- helpers ---
+float sdCircle(vec2 p, float r) {
+    return length(p) - r;
+}
+
+float sdBox(vec2 p, vec2 b) {
+    vec2 d = abs(p) - b;
+    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+
+float sdRoundedBox(vec2 p, vec2 b, float r) {
+    vec2 q = abs(p) - b + vec2(r);
+    return length(max(q, 0.0)) - r;
+}
+
+float sdTriangle(vec2 p, float r) {
+    const float k = sqrt(3.0);
+    p.x = abs(p.x) - r;
+    p.y = p.y + r / k;
+    if (p.x + k * p.y > 0.0) p = vec2(p.x - k * p.y, -k * p.x - p.y) / 2.0;
+    p.x -= clamp(p.x, -2.0 * r, 0.0);
+    return -length(p) * sign(p.y);
+}
+
+float sdPolygon(vec2 p, int n, float r) {
+    float a = atan(p.y, p.x) + 3.1415926;
+    float sector = 6.2831853 / float(n);
+    float d = cos(floor(0.5 + a / sector) * sector - a) * length(p);
+    return d - r;
+}
+
+// --- shape functions returning vec4 ---
+
+vec4 circleShape(vec2 p, float r) {
+    return sdCircle(p, r) < 0.0 ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 squareShape(vec2 p, float r) {
+    return sdBox(p, vec2(r)) < 0.0 ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 slantedShape(vec2 p, float r) {
+    // just a rotated square
+    float a = radians(15.0);
+    mat2 rot = mat2(cos(a), -sin(a), sin(a), cos(a));
+    return sdBox(rot * p, vec2(r)) < 0.0 ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 semicircleShape(vec2 p, float r) {
+    return (sdCircle(p, r) < 0.0 && p.y > 0.0) ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 ovalShape(vec2 p, vec2 radii) {
+    float k = length(p / radii) - 1.0;
+    return (k < 0.0) ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 pillShape(vec2 p, vec2 size, float r) {
+    vec2 q = abs(p) - size;
+    return (length(max(q, 0.0)) - r < 0.0) ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 triangleShape(vec2 p, float r) {
+    return sdTriangle(p, r) < 0.0 ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 diamondShape(vec2 p, float r) {
+    return sdPolygon(p, 4, r) < 0.0 ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 pentagonShape(vec2 p, float r) {
+    return sdPolygon(p, 5, r) < 0.0 ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 hexagonShape(vec2 p, float r) {
+    return sdPolygon(p, 6, r) < 0.0 ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 heptagonShape(vec2 p, float r) {
+    return sdPolygon(p, 7, r) < 0.0 ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 nonagonShape(vec2 p, float r) {
+    return sdPolygon(p, 9, r) < 0.0 ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 dodecagonShape(vec2 p, float r) {
+    return sdPolygon(p, 12, r) < 0.0 ? SHAPE_COLOR : vec4(0.0);
+}
+
+// --- burst shapes ---
+vec4 starShape(vec2 p, int n, float r, float inner) {
+    float a = atan(p.y, p.x);
+    float sector = 3.1415926 * 2.0 / float(n);
+    float d = cos(floor(0.5 + a / sector) * sector - a) * length(p);
+    float k = mix(r, inner, mod(floor(0.5 + a / sector), 2.0));
+    return (d < k) ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 burstShape(vec2 p, float r) {
+    return starShape(p, 16, r, r * 0.5);
+}
+
+vec4 softBurstShape(vec2 p, float r) {
+    return starShape(p, 12, r, r * 0.7);
+}
+
+vec4 flowerShape(vec2 p, float r) {
+    float a = atan(p.y, p.x);
+    float k = cos(6.0 * a) * 0.3 + 0.7;
+    return (length(p) < r * k) ? SHAPE_COLOR : vec4(0.0);
+}
+
+vec4 heartShape(vec2 p, float r) {
+    p.y += 0.25 * r;
+    float a = atan(p.x, p.y) / 3.1415926;
+    float d = length(p) - r;
+    d = max(d, (abs(p.x) + p.y - r));
+    return d < 0.0 ? SHAPE_COLOR : vec4(0.0);
+}
+
+// --- TODO shapes like pixelated versions would need step-based pixelization ---
+
